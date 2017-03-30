@@ -49,16 +49,10 @@ foreach ( $lines as $line )
     {
         if ( isset( $session['name'] ) )
         {
-            // reorder the session names based on the hostname for uniformity.
-            if ( strpos( $session['name'], '@' ) !== FALSE )
-            {
-                list( $u, $h ) = explode( '@', $session['name'] );
-            };
-
             // is the hostname provided as an IP address?
             $ip = preg_match( '/\d+\.\d+\.\d+\.\d+/', $session['host'] );
 
-            $session['name'] = ( $ip ? $h : $session['host'] ) . ' - ' . $u;
+          //  $session['name'] = ( $ip ? $h : $session['host'] ) . ' - ' . $u;
 
             $list[] = $session;
         };
@@ -66,7 +60,8 @@ foreach ( $lines as $line )
         $session = array(
             'name' => urldecode( $matches[1] ),
             'host' => '',
-            'user' => ''
+            'user' => '',
+            'remote' => ''
         );
     };
 
@@ -76,7 +71,7 @@ foreach ( $lines as $line )
         #if ( strlen( $matches[1] ) === 0 ) continue;
 
         $session['host'] = $matches[1];
-        
+
         if ( strpos( $session['host'], '@' ) !== FALSE )
         {
             list( $u, $h ) = explode( '@', $session['host'] );
@@ -92,7 +87,16 @@ foreach ( $lines as $line )
 
         $session['user'] = $matches[1];
     };
+
+    // parse remote command.
+    if ( preg_match( '/"RemoteCommand"="(.*)"/', $str, $matches ) )
+    {
+        #if ( strlen( $matches[1] ) === 0 ) continue;
+        $session['remote'] = $matches[1];
+    };
 };
+
+
 
 // construct .shuttle.json configuration file.
 $shuttle = array(
@@ -101,7 +105,8 @@ $shuttle = array(
         'Hosts will also be read from your ~/.ssh/config or /etc/ssh_config file, if available',
         'For more information on how to configure, please see http://fitztrev.github.io/shuttle/'
     ),
-    'terminal' => 'Terminal.app',
+    'terminal' => 'iTerm',
+    'iTerm_version' => 'stable',
     'launch_at_login' => FALSE,
     'show_ssh_config_hosts' => TRUE,
     'ssh_config_ignore_hosts' => array(),
@@ -112,9 +117,9 @@ $shuttle = array(
 // convert sessions to accounts in shuttle format.
 foreach ( $list as $item )
 {
-    $shuttle['hosts'][] = array( 
-        'name' => $item['name'], 
-        'cmd' => sprintf( 'ssh %s@%s', $item['user'], $item['host'] ) 
+    $shuttle['hosts'][] = array(
+        'name' => $item['name'],
+        'cmd' => sprintf( 'ssh -A %s@%s %s', $item['user'], $item['host'], $item['remote'] )
     );
 };
 
